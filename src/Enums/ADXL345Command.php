@@ -1,0 +1,37 @@
+<?php
+
+namespace ScrapyardIO\Sensors\Accelerometers\ADXL345\Enums;
+
+enum ADXL345Command: int
+{
+    case DEVICE_ID_REGISTER = 0x00;
+    case TAP_THRESHOLD_REGISTER = 0x1D;
+    case X_OFFSET_REGISTER = 0x1E;
+    case Y_OFFSET_REGISTER = 0x1F;
+    case Z_OFFSET_REGISTER = 0x20;
+    case TAP_DURATION_REGISTER = 0x21;
+    case TAP_LAG_REGISTER = 0x22;
+    case TAP_WINDOW_REGISTER = 0x23;
+    case ACTIVITY_THRESHOLD_REGISTER = 0x24;
+    case INACTIVITY_THRESHOLD_REGISTER = 0x25;
+    case INACTIVITY_TIME_REGISTER = 0x26;
+    case ACTIVITY_INACTIVITY_CONTROL = 0x27;
+    case FREEFALL_THRESHOLD_REGISTER = 0x28;
+    case FREEFALL_TIME_REGISTER = 0x29;
+    case TAP_ACCESS_CONTROL = 0x2A;
+    case TAP_STATUS_CONTROL = 0x2B;
+    case BW_RATE_REGISTER = 0x2C;
+    case POWER_CTRL_REGISTER = 0x2D;
+    case INT_ENABLE_CONTROL = 0x2E;
+    case INT_MAPPING_CONTROL = 0x2F;
+    case INT_SOURCE_CONTROL = 0x30;
+    case DATA_FORMAT_REGISTER = 0x31;
+    case X_AXIS_LOW = 0x32;
+    case X_AXIS_HIGH = 0x33;
+    case Y_AXIS_LOW = 0x34;
+    case Y_AXIS_HIGH = 0x35;
+    case Z_AXIS_LOW = 0x36;
+    case Z_AXIS_HIGH = 0x37;
+    case FIFO_CONTROL_REGISTER = 0x38;
+    case FIFO_STATUS_REGISTER = 0x39;
+}
