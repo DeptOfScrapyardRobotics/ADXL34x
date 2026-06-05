@@ -1,0 +1,34 @@
+<?php
+
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums;
+
+enum ADXL345ReadRegister: int
+{
+    case DEVICE_ID_REGISTER = 0x00;
+    case THRESHOLD_TAP_REGISTER = 0x1D;
+
+    case DATA_FROM_X_OFFSET_REGISTER = 0x1E;
+    case DATA_FROM_Y_OFFSET_REGISTER = 0x1F;
+    case DATA_FROM_Z_OFFSET_REGISTER = 0x20;
+    case DURATION_REGISTER = 0x21;
+    case LATENCY_REGISTER = 0x22;
+    case WINDOW_REGISTER = 0x23;
+    case THRESHOLD_ACTIVITY_REGISTER = 0x24;
+    case THRESHOLD_FREE_FALL_REGISTER = 0x28;
+    case TIME_FREE_FALL_REGISTER = 0x29;
+    case TAP_AXES_REGISTER = 0x2A;
+
+    case BW_RATE_REGISTER = 0x2C;
+    case POWER_CONTROL_REGISTER = 0x2D;
+    case INTERRUPTS_ENABLED_REGISTER = 0x2E;
+    case INTERRUPT_SOURCE_REGISTER = 0x30;
+
+    // Data format and output
+    case DATA_FORMAT_REGISTER = 0x31;
+    case DATA_FROM_X0_REGISTER = 0x32;
+    case DATA_FROM_X1_REGISTER = 0x33;
+    case DATA_FROM_Y0_REGISTER = 0x34;
+    case DATA_FROM_Y1_REGISTER = 0x35;
+    case DATA_FROM_Z0_REGISTER = 0x36;
+    case DATA_FROM_Z1_REGISTER = 0x37;
+}
