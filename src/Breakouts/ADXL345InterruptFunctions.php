@@ -1,8 +1,8 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\DataObjects;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL345\Breakouts;
 
-use BareMetal\DataObjects\DataRegister;
+use BareMetal\Circuits\DataRegister;
 
 readonly class ADXL345InterruptFunctions extends DataRegister
 {

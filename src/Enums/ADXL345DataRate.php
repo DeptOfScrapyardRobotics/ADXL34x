@@ -1,6 +1,6 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL345\Enums;
 
 /**
  * Output data rate — stored in BW_RATE register bits [3:0].

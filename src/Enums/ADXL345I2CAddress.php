@@ -1,6 +1,6 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL345\Enums;
 
 enum ADXL345I2CAddress: int
 {

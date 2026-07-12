@@ -1,8 +1,8 @@
 {
-    "name": "dept-of-scrapyard-robotics/adxl34x",
-    "description": "Drive the ADXL34x family of motion sensors over I2C/SPI with PHP",
+    "name": "dept-of-scrapyard-robotics/adxl345",
+    "description": "Drive ADXL345 accelerometers over I2C/SPI with PHP",
     "type": "library",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "keywords": [
         "framework",
         "scrapyard-io"
@@ -17,19 +17,24 @@
     ],
     "require": {
         "php": "^8.3",
-        "scrapyard-io/waveforms": "^0.4.0",
-        "scrapyard-io/reality-interface": "^0.4.0",
-        "scrapyard-io/bare-metal": "^0.4.0"
+        "waveforms/i2c": "^0.5.0",
+        "waveforms/spi": "^0.5.0",
+        "bare-metal/circuits": "^0.5.0",
+        "bare-metal/sensors": "^0.5.0",
+        "scrapyard-io/nuts-and-bolts": "^0.5.0"
     },
     "suggest": {
-        "scrapyard-io/gpio": "^0.3.0 - For direct linux-based GPIO",
-        "scrapyard-io/i2c": "^0.3.0 - For direct linux-based I2C",
-        "scrapyard-io/spi": "^0.3.0 - For direct linux-based SPI",
-        "scrapyard-io/mpsse": "^0.3.0 - For I2C/SPI/GPIO over an FTDI Serial-to-USB Device"
+        "ext-posi": "^0.4.0",
+        "ext-ftdi": "^0.4.0",
+        "microscrap/posix": "^0.5.0",
+        "microscrap/mpsse": "^0.5.0",
+        "waveforms/digital": "^0.5.0",
+        "waveforms/i2c": "^0.5.0",
+        "waveforms/spi": "^0.5.0"
     },
     "autoload": {
         "psr-4": {
-            "DeptOfScrapyardRobotics\\Sensors\\ADXL34x\\": "src/"
+            "DeptOfScrapyardRobotics\\Sensors\\ADXL345\\": "src/"
         }
     },
     "autoload-dev": {
