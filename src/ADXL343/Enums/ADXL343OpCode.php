@@ -1,8 +1,8 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL345\Enums;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums;
 
-enum ADXL345OpCode: int
+enum ADXL343OpCode: int
 {
     case DEVICE_ID_REGISTER = 0x00;
 
@@ -24,7 +24,6 @@ enum ADXL345OpCode: int
     case INTERRUPTS_ENABLED_REGISTER = 0x2E;
     case INTERRUPT_SOURCE_REGISTER = 0x30;
 
-    // Data format and output
     case DATA_FORMAT_REGISTER = 0x31;
     case DATA_FROM_X0_REGISTER = 0x32;
     case DATA_FROM_X1_REGISTER = 0x33;

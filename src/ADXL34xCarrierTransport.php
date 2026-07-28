@@ -1,23 +1,23 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL345;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x;
 
-use GPIO\Contracts\I2C\I2CAPI;
-use GPIO\Contracts\SPI\SPIAPI;
-use ScrapyardIO\NutsAndBolts\Concerns\Splices16Bits;
+use Fabricate\NutsAndBolts\Concerns\Splices16Bits;
+use GeneralPurposeIO\I2C\I2CSlave;
+use GeneralPurposeIO\SPI\SPIDevice;
 
-class ADXL345SignalTransport
+class ADXL34xCarrierTransport
 {
-    use Splices16Bits, ADXL345IO;
+    use ADXL34xIO, Splices16Bits;
 
     public readonly string $active_transport;
 
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     public function __construct(
-        protected ?I2CAPI $i2c = null,
-        protected ?SPIAPI $spi = null,
+        protected ?I2CSlave $i2c = null,
+        protected ?SPIDevice $spi = null,
     ) {
         $this->active_transport = $this->detectTransport();
     }
@@ -35,7 +35,7 @@ class ADXL345SignalTransport
     }
 
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     protected function detectTransport(): string
     {
@@ -46,6 +46,12 @@ class ADXL345SignalTransport
             return 'spi';
         }
 
-        throw ADXL345Exception::transportMissingProtocol();
+        throw ADXL34xException::transportMissingProtocol();
+    }
+
+    public function close(): void
+    {
+        $this->i2c?->close();
+        $this->spi?->close();
     }
 }

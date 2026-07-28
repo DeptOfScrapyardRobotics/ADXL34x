@@ -1,17 +1,17 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL345\Breakouts;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts;
 
-use BareMetal\Circuits\DataRegister;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Enums\ADXL345SleepSamplingRate;
+use Fabricate\Circuits\DataRegister;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343SleepSamplingRate;
 
-readonly class ADXL345PowerControl extends DataRegister
+readonly class ADXL343PowerControl extends DataRegister
 {
     public function __construct(
         public bool $link = false,
         public bool $measurement_mode = false,
         public bool $sleep_mode = true,
-        public ADXL345SleepSamplingRate $wakeup = ADXL345SleepSamplingRate::SLEEP_8HZ,
+        public ADXL343SleepSamplingRate $wakeup = ADXL343SleepSamplingRate::SLEEP_8HZ,
     ) {}
 
     public function toBits(): string
@@ -35,7 +35,7 @@ readonly class ADXL345PowerControl extends DataRegister
             $bits[4],
             $bits[3],
             $bits[2],
-            ADXL345SleepSamplingRate::from($bits10)
+            ADXL343SleepSamplingRate::from($bits10)
         );
     }
 
@@ -45,7 +45,7 @@ readonly class ADXL345PowerControl extends DataRegister
             false,
             false,
             false,
-            ADXL345SleepSamplingRate::SLEEP_8HZ
+            ADXL343SleepSamplingRate::SLEEP_8HZ
         );
     }
 }

@@ -1,31 +1,32 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL345;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Concerns;
 
-use BareMetal\Contracts\Circuits\BootScaffolding;
-use BareMetal\Contracts\Sensors\Accelerometry\CelestialBody;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Enums\ADXL345OpCode;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Breakouts\ADXL345PowerControl;
-use ScrapyardIO\NutsAndBolts\Concerns\Splices16Bits;
+use Fabricate\NutsAndBolts\Concerns\Splices16Bits;
+use Fabricate\Contracts\Sensors\Enums\CelestialBody;
+use Fabricate\Contracts\NutsAndBolts\BootScaffolding;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL34xException;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343OpCode;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343PowerControl;
 
-trait ADXL345InternalAPI
+trait ADXL343InternalAPI
 {
     use BootScaffolding, Splices16Bits;
 
     protected int $hardwired_device_id = 0xE5;
 
-    protected function sendCommand(ADXL345OpCode $register, array $command_data = []): int
+    protected function sendCommand(ADXL343OpCode $register, array $command_data = []): int
     {
         return $this->transport->write($register->value, $command_data);
     }
 
-    protected function readData(ADXL345OpCode $register, int $length): array
+    protected function readData(ADXL343OpCode $register, int $length): array
     {
         return $this->transport->read($register->value, $length);
     }
 
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     protected function _boot(): void
     {
@@ -35,18 +36,18 @@ trait ADXL345InternalAPI
     }
 
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     protected function confirmDeviceId(): void
     {
         if ($this->device_id != $this->hardwired_device_id) {
-            throw ADXL345Exception::invalidChipId($this->device_id);
+            throw ADXL34xException::invalidChipId($this->device_id, $this->hardwired_device_id);
         }
     }
 
     protected function setupPowerControl(): void
     {
-        $this->power_control = new ADXL345PowerControl(measurement_mode: true, sleep_mode: false);
+        $this->power_control = new ADXL343PowerControl(measurement_mode: true, sleep_mode: false);
     }
 
     protected function setInterruptPinFunctions(): void

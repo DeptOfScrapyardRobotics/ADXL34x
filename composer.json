@@ -1,9 +1,11 @@
 {
-    "name": "dept-of-scrapyard-robotics/adxl345",
-    "description": "Drive ADXL345 accelerometers over I2C/SPI with PHP",
+    "name": "dept-of-scrapyard-robotics/adxl34x",
+    "description": "Drive ADXL343 & ADXL345 accelerometers over I2C/SPI with PHP",
     "type": "library",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "keywords": [
+        "adxl343",
+        "adxl345",
         "framework",
         "scrapyard-io"
     ],
@@ -17,24 +19,20 @@
     ],
     "require": {
         "php": "^8.3",
-        "waveforms/i2c": "^0.5.0",
-        "waveforms/spi": "^0.5.0",
-        "bare-metal/circuits": "^0.5.0",
-        "bare-metal/sensors": "^0.5.0",
-        "scrapyard-io/nuts-and-bolts": "^0.5.0"
+        "fabricate/circuits": "^0.6.0",
+        "gpio/contracts": "^0.6.0",
+        "gpio/i2c": "^0.6.0",
+        "gpio/spi": "^0.6.0",
+        "fabricate/nuts-and-bolts": "^0.6.0"
     },
     "suggest": {
-        "ext-posi": "^0.4.0",
-        "ext-ftdi": "^0.4.0",
-        "microscrap/posix": "^0.5.0",
-        "microscrap/mpsse": "^0.5.0",
-        "waveforms/digital": "^0.5.0",
-        "waveforms/i2c": "^0.5.0",
-        "waveforms/spi": "^0.5.0"
+        "microscrap/i2c": "^0.5.0 - For direct linux-based I2C",
+        "microscrap/spi": "^0.5.0 - For direct linux-based SPI",
+        "microscrap/mpsse": "^0.5.0 - For I2C over an FTDI Serial-to-USB Device"
     },
     "autoload": {
         "psr-4": {
-            "DeptOfScrapyardRobotics\\Sensors\\ADXL345\\": "src/"
+            "DeptOfScrapyardRobotics\\Sensors\\ADXL34x\\": "src/"
         }
     },
     "autoload-dev": {
@@ -44,6 +42,16 @@
     },
     "config": {
         "sort-packages": true
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "0.6.x-dev"
+        },
+        "scrapyard-io": {
+            "providers": [
+                "DeptOfScrapyardRobotics\\Sensors\\ADXL34x\\ADXL34xServiceProvider"
+            ]
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true

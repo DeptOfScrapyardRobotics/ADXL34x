@@ -1,11 +1,11 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL345;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x;
 
-trait ADXL345IO
+trait ADXL34xIO
 {
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     protected function spiRead(int $register, int $length): array
     {
@@ -21,11 +21,11 @@ trait ADXL345IO
             return array_slice($rx, 1, $length);
         }
 
-        throw ADXL345Exception::transportMissingProtocol();
+        throw ADXL34xException::transportMissingProtocol();
     }
 
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     protected function spiWrite(int $register, array $data = []): int
     {
@@ -40,11 +40,11 @@ trait ADXL345IO
             return $this->spi->write($payload);
         }
 
-        throw ADXL345Exception::transportMissingProtocol();
+        throw ADXL34xException::transportMissingProtocol();
     }
 
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     protected function i2cRead(int $register, int $length): array
     {
@@ -52,11 +52,11 @@ trait ADXL345IO
             return $this->i2c->writeRead([$this->getLowByte($register)], $length);
         }
 
-        throw ADXL345Exception::transportMissingProtocol();
+        throw ADXL34xException::transportMissingProtocol();
     }
 
     /**
-     * @throws ADXL345Exception
+     * @throws ADXL34xException
      */
     protected function i2cWrite(int $register, array $data = []): int
     {
@@ -66,6 +66,6 @@ trait ADXL345IO
             return $this->i2c->write($payload);
         }
 
-        throw ADXL345Exception::transportMissingProtocol();
+        throw ADXL34xException::transportMissingProtocol();
     }
 }

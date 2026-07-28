@@ -1,17 +1,19 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL345;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Concerns;
 
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Breakouts\ADXL345InterruptFunctions;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Enums\ADXL345DataRate;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Enums\ADXL345OpCode;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Breakouts\ADXL345PowerControl;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Enums\ADXL345Range;
-use DeptOfScrapyardRobotics\Sensors\ADXL345\Enums\ADXL345SleepSamplingRate;
-use BareMetal\Contracts\Sensors\Accelerometry\AxisOrientation;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Breakouts\ADXL345InterruptFunctions;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Breakouts\ADXL345PowerControl;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345DataRate;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345OpCode;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345Range;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345SleepSamplingRate;
+use Fabricate\Contracts\Sensors\Enums\AxisOrientation;
 
 trait ADXL345API
 {
+    use ADXL345InternalAPI;
+
     use ADXL345InternalAPI;
 
     protected array $event_status = [];

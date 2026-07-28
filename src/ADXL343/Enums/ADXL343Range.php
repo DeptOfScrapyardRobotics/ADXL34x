@@ -1,6 +1,6 @@
 <?php
 
-namespace DeptOfScrapyardRobotics\Sensors\ADXL345\Enums;
+namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums;
 
 /**
  * Measurement range — stored in DATA_FORMAT register bits [1:0].
@@ -8,7 +8,7 @@ namespace DeptOfScrapyardRobotics\Sensors\ADXL345\Enums;
  * The scale factor (g per LSB) applies in fixed-resolution mode (10-bit).
  * In full-resolution mode the scale is always 3.9 mg/LSB regardless of range.
  */
-enum ADXL345Range: int
+enum ADXL343Range: int
 {
     /** ±2 g  — 3.9 mg/LSB */
     case G2 = 0x00;
