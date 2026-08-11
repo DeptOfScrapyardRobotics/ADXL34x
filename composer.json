@@ -18,8 +18,13 @@
     ],
     "require": {
         "php": "^8.4|^8.5|^8.6",
-        "scrapyard-io/gpio-framework": "^0.7.0",
-        "scrapyard-io/waveforms": "^0.7.0"
+        "gpio/circuits": "^0.7.0",
+        "gpio/i2c": "^0.7.0",
+        "gpio/spi": "^0.7.0",
+        "gpio/digital": "^0.7.0",
+        "gpio/contracts": "^0.7.0",
+        "waveforms/contracts": "^0.7.0",
+        "fabricate/nuts-and-bolts": "^0.7.0"
     },
     "suggest": {
         "microscrap/i2c": "^0.7.0 - POSIX I2C",

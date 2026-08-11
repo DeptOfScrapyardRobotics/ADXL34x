@@ -20,3 +20,4 @@ Before changing this package or advising on ADXL34x architecture:
 - ICs extend `GeneralPurposeIO\Circuits\SensorIC`, implement `BootSequence`; factories `i2c(...)` / `spi(...)`.
 - SPI factory/profile params: `spi_device`, `chip_select`, `spi_adapter` — not bare `device`/`adapter`.
 - Breakouts use `GeneralPurposeIO\Circuits\DataRegister`; boot uses `BootScaffolding`. Nab `Splices16Bits` is OK. Local `AxisOrientation` / `CelestialBody` — no Fabricate sensor contracts.
+- Requires leaf components (not kitchen-sink frameworks): `fabricate/nuts-and-bolts`, `gpio/circuits`, `gpio/contracts`, `gpio/digital`, `gpio/i2c`, `gpio/spi`, `waveforms/contracts`.

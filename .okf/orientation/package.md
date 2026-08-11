@@ -33,7 +33,13 @@ sources:
 
 | Package | Constraint |
 |---------|------------|
-| `scrapyard-io/gpio-framework` | `^0.7.0` |
+| `fabricate/nuts-and-bolts` | `^0.7.0` |
+| `gpio/circuits` | `^0.7.0` |
+| `gpio/contracts` | `^0.7.0` |
+| `gpio/digital` | `^0.7.0` |
+| `gpio/i2c` | `^0.7.0` |
+| `gpio/spi` | `^0.7.0` |
+| `waveforms/contracts` | `^0.7.0` |
 
 Suggested (optional): `microscrap/i2c`, `microscrap/spi`, `microscrap/mpsse` at `^0.7.0`.[^composer]
 
