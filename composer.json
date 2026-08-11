@@ -2,11 +2,10 @@
     "name": "dept-of-scrapyard-robotics/adxl34x",
     "description": "Drive ADXL343 & ADXL345 accelerometers over I2C/SPI with PHP",
     "type": "library",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "keywords": [
         "adxl343",
         "adxl345",
-        "framework",
         "scrapyard-io"
     ],
     "license": "MIT",
@@ -18,17 +17,14 @@
         }
     ],
     "require": {
-        "php": "^8.3",
-        "fabricate/circuits": "^0.6.0",
-        "gpio/contracts": "^0.6.0",
-        "gpio/i2c": "^0.6.0",
-        "gpio/spi": "^0.6.0",
-        "fabricate/nuts-and-bolts": "^0.6.0"
+        "php": "^8.4|^8.5|^8.6",
+        "scrapyard-io/gpio-framework": "^0.7.0",
+        "scrapyard-io/waveforms": "^0.7.0"
     },
     "suggest": {
-        "microscrap/i2c": "^0.5.0 - For direct linux-based I2C",
-        "microscrap/spi": "^0.5.0 - For direct linux-based SPI",
-        "microscrap/mpsse": "^0.5.0 - For I2C over an FTDI Serial-to-USB Device"
+        "microscrap/i2c": "^0.7.0 - POSIX I2C",
+        "microscrap/spi": "^0.7.0 - POSIX SPI",
+        "microscrap/mpsse": "^0.7.0 - I2C/SPI over FTDI MPSSE"
     },
     "autoload": {
         "psr-4": {
@@ -40,18 +36,18 @@
             "DeptOfScrapyardRobotics\\Tests\\": "tests/"
         }
     },
-    "config": {
-        "sort-packages": true
-    },
     "extra": {
         "branch-alias": {
-            "dev-master": "0.6.x-dev"
+            "dev-master": "0.7.x-dev"
         },
         "scrapyard-io": {
             "providers": [
                 "DeptOfScrapyardRobotics\\Sensors\\ADXL34x\\ADXL34xServiceProvider"
             ]
         }
+    },
+    "config": {
+        "sort-packages": true
     },
     "minimum-stability": "dev",
     "prefer-stable": true

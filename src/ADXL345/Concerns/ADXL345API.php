@@ -8,7 +8,7 @@ use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345DataRate;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345OpCode;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345Range;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345SleepSamplingRate;
-use Fabricate\Contracts\Sensors\Enums\AxisOrientation;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\Enums\AxisOrientation;
 
 trait ADXL345API
 {

@@ -3,8 +3,8 @@
 namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Concerns;
 
 use Fabricate\NutsAndBolts\Concerns\Splices16Bits;
-use Fabricate\Contracts\Sensors\Enums\CelestialBody;
-use Fabricate\Contracts\NutsAndBolts\BootScaffolding;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\Enums\CelestialBody;
+use GeneralPurposeIO\Contracts\Circuits\BootScaffolding;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL34xException;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343OpCode;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343PowerControl;

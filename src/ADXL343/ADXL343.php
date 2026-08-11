@@ -3,22 +3,24 @@
 namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343;
 
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343InterruptFunctions;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Concerns\ADXL343API;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL34xCarrierTransport;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL34xException;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\Enums\ADXL34xI2CAddress;
 use Exception;
-use Fabricate\Contracts\Circuits\Attributes\IntegratedCircuit;
-use Fabricate\Contracts\NutsAndBolts\BootSequence;
-use Fabricate\Contracts\Circuits\IntegratedCircuit as CircuitContract;
-use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Concerns\ADXL343API;
-use Fabricate\Contracts\Sensors\Interfaces\Accelerometer;
+use GeneralPurposeIO\Circuits\Types\SensorIC;
+use GeneralPurposeIO\Contracts\Circuits\Attributes\IntegratedCircuit;
+use GeneralPurposeIO\Contracts\Circuits\Attributes\Pinout;
+use GeneralPurposeIO\Contracts\Circuits\BootSequence;
 use GeneralPurposeIO\I2C\I2C;
 use GeneralPurposeIO\I2C\I2CSlave;
 use GeneralPurposeIO\SPI\SPI;
 use GeneralPurposeIO\SPI\SPIDevice;
+use Waveforms\Contracts\Motion\MeasuresAcceleration;
 
 #[IntegratedCircuit('I2C', 'SPI')]
-class ADXL343 implements CircuitContract, BootSequence, Accelerometer
+#[Pinout(['I2C' => ['driver', 'device', 'slave']], ['SPI' => ['driver', 'device', 'chip_select']])]
+class ADXL343 extends SensorIC implements BootSequence, MeasuresAcceleration
 {
     use ADXL343API;
 
@@ -146,14 +148,14 @@ class ADXL343 implements CircuitContract, BootSequence, Accelerometer
     }
 
     public static function spi(
-        string|int $device,
+        string|int $spi_device,
         string|int $chip_select,
-        ?string $adapter = null,
+        ?string $spi_adapter = null,
         ADXL343InterruptFunctions $int_fns = new ADXL343InterruptFunctions,
         bool $boot_now = true
     ): static
     {
-        $spi = SPI::adapter($adapter)->device($device)
+        $spi = SPI::adapter($spi_adapter)->device($spi_device)
             ->mode(3)->speed(1000000)->bus()
             ->select($chip_select);
 
