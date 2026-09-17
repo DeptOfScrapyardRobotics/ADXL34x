@@ -2,7 +2,7 @@
 
 namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Breakouts;
 
-use GeneralPurposeIO\Circuits\DataRegister;
+use GeneralPurposeIO\IntegratedCircuits\DataRegister;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345SleepSamplingRate;
 
 readonly class ADXL345PowerControl extends DataRegister

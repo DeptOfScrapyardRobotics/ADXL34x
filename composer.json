@@ -1,11 +1,14 @@
 {
     "name": "dept-of-scrapyard-robotics/adxl34x",
-    "description": "Drive ADXL343 & ADXL345 accelerometers over I2C/SPI with PHP",
+    "description": "Drive ADXL343 & ADXL345 three-axis accelerometers over I2C or SPI with the ScrapyardIO GPIO framework.",
     "type": "library",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "keywords": [
         "adxl343",
         "adxl345",
+        "accelerometer",
+        "i2c",
+        "spi",
         "scrapyard-io"
     ],
     "license": "MIT",
@@ -18,18 +21,24 @@
     ],
     "require": {
         "php": "^8.4|^8.5|^8.6",
-        "gpio/circuits": "^0.7.0",
-        "gpio/i2c": "^0.7.0",
-        "gpio/spi": "^0.7.0",
-        "gpio/digital": "^0.7.0",
-        "gpio/contracts": "^0.7.0",
-        "waveforms/contracts": "^0.7.0",
-        "fabricate/nuts-and-bolts": "^0.7.0"
+        "gpio/contracts": "^0.8.0",
+        "gpio/integrated-circuits": "^0.8.0",
+        "gpio/nuts-and-bolts": "^0.8.0",
+        "venusian-voyager/nuts-and-bolts": "^0.8.0"
+    },
+    "require-dev": {
+        "gpio/digital": "^0.8.0",
+        "gpio/i2c": "^0.8.0",
+        "pestphp/pest": "^4",
+        "venusian-voyager/config": "^0.8.0",
+        "venusian-voyager/vessel": "^0.8.0"
     },
     "suggest": {
-        "microscrap/i2c": "^0.7.0 - POSIX I2C",
-        "microscrap/spi": "^0.7.0 - POSIX SPI",
-        "microscrap/mpsse": "^0.7.0 - I2C/SPI over FTDI MPSSE"
+        "gpio/digital": "^0.8.0 - INT1 / INT2 interrupt pins",
+        "gpio/i2c": "^0.8.0 - I2C connections for ADXL34xI2CTransport",
+        "gpio/spi": "^0.8.0 - SPI connections for ADXL34xSPITransport",
+        "microscrap/scrapyard-linux": "^0.8.0 - native i2c-dev, spidev and libgpiod drivers",
+        "microscrap/scrapyard-usb": "^0.8.0 - MPSSE I2C, SPI and pins over FTDI"
     },
     "autoload": {
         "psr-4": {
@@ -38,22 +47,63 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "DeptOfScrapyardRobotics\\Tests\\": "tests/"
+            "DeptOfScrapyardRobotics\\Sensors\\ADXL34x\\Tests\\": "tests/"
         }
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "0.7.x-dev"
+            "dev-main": "0.8.x-dev"
         },
-        "scrapyard-io": {
+        "venusian": {
             "providers": [
-                "DeptOfScrapyardRobotics\\Sensors\\ADXL34x\\ADXL34xServiceProvider"
+                "DeptOfScrapyardRobotics\\Sensors\\ADXL34x\\Providers\\ADXL34xServiceProvider"
             ]
         }
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/Volumes/ProjectSaturnStudios/Development/PHP/ProjectSaturnStudios/dev/scrapyard-io/framework/src/GeneralPurposeIO/*",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "gpio/contracts": "0.8.0",
+                    "gpio/digital": "0.8.0",
+                    "gpio/i2c": "0.8.0",
+                    "gpio/integrated-circuits": "0.8.0",
+                    "gpio/nuts-and-bolts": "0.8.0",
+                    "gpio/pwm": "0.8.0",
+                    "gpio/spi": "0.8.0",
+                    "gpio/uart": "0.8.0"
+                }
+            }
+        },
+        {
+            "type": "path",
+            "url": "/Volumes/ProjectSaturnStudios/Development/PHP/ProjectSaturnStudios/dev/venusian/framework/src/Voyager/*",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "venusian-voyager/collections": "0.8.8",
+                    "venusian-voyager/conditionable": "0.8.8",
+                    "venusian-voyager/config": "0.8.8",
+                    "venusian-voyager/contracts": "0.8.8",
+                    "venusian-voyager/io-pools": "0.8.8",
+                    "venusian-voyager/macroable": "0.8.8",
+                    "venusian-voyager/magic-aliases": "0.8.8",
+                    "venusian-voyager/nuts-and-bolts": "0.8.8",
+                    "venusian-voyager/reflection": "0.8.8",
+                    "venusian-voyager/vessel": "0.8.8"
+                }
+            }
+        }
+    ]
 }

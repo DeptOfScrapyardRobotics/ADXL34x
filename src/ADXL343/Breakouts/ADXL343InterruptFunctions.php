@@ -2,7 +2,8 @@
 
 namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts;
 
-use GeneralPurposeIO\Circuits\DataRegister;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343InterruptFunction;
+use GeneralPurposeIO\IntegratedCircuits\DataRegister;
 
 readonly class ADXL343InterruptFunctions extends DataRegister
 {
@@ -45,6 +46,20 @@ readonly class ADXL343InterruptFunctions extends DataRegister
             $bits[1],
             $bits[0],
         );
+    }
+
+    public function has(ADXL343InterruptFunction $function): bool
+    {
+        return (bool) $this->{$function->property()};
+    }
+
+    /** @return list<ADXL343InterruptFunction> the functions whose bit is set, bit 7 first */
+    public function functions(): array
+    {
+        return array_values(array_filter(
+            ADXL343InterruptFunction::cases(),
+            fn (ADXL343InterruptFunction $function): bool => $this->has($function),
+        ));
     }
 
     public static function none(): static

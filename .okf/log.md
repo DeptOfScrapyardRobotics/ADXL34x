@@ -1,9 +1,7 @@
-# Directory Update Log
+# dept-of-scrapyard-robotics/adxl34x Update Log
 
-## 2026-08-11
-
-* **Fix (draft)**: Composer `require` uses leaf components (`gpio/*`, `waveforms/contracts` or `tubes/contracts`, `fabricate/nuts-and-bolts`) — no `scrapyard-io/gpio-framework` / `scrapyard-io/waveforms` / `scrapyard-io/tubes` kitchen sinks. Amended [package](orientation/package.md).
-
-## 2026-08-10
-
-* **Creation**: Initial `.okf` for `dept-of-scrapyard-robotics/adxl34x` 0.7 — package orientation, ADXL343/ADXL345 IC surface (I2C/SPI factories, DataRegister breakouts, local enums), Circuits registration/profiles/smoke, Fabricate leftovers + SPI factory param-name traps, lean `AGENTS.md`, package `README.md`.
+## 2026-09-16
+* **Update**: [interrupts](/interrupts.md) rewritten for the `interrupts()` dispatcher (wired edges or INT_SOURCE polling, poll / wait / every, routing cache, INT_MAP, event registers); [chip-settings](/chip-settings.md) property table + `withIntInvert()`; [dock-sampling](/dock-sampling.md) drops `GPIO::watch` on INT lines.
+* **Removal**: traps/latched-interrupts (driver now reads INT_SOURCE).
+* **Creation**: [traps/level-interrupts-repeat](/traps/level-interrupts-repeat.md), [traps/shared-int-line](/traps/shared-int-line.md).
+* **Creation**: bundle seeded for 0.8.0 — [overview](/overview.md), [connecting](/connecting.md), [reading](/reading.md), [chip-settings](/chip-settings.md), [interrupts](/interrupts.md), [dock-sampling](/dock-sampling.md), [configuration](/configuration.md), four [traps](/traps/index.md).

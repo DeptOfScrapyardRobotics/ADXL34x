@@ -2,34 +2,61 @@
 
 namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Concerns;
 
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343ActivityControl;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343DataFormat;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343InterruptFunctions;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343InterruptMap;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343PowerControl;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343TapAxes;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343DataRate;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343OpCode;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343Range;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343SleepSamplingRate;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL34xException;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\Enums\AxisOrientation;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\Transports\ADXL34xDataTransport;
+use GeneralPurposeIO\Contracts\NutsAndBolts\Splices16Bits;
 
 trait ADXL343API
 {
-    use ADXL343InternalAPI;
+    use Splices16Bits;
 
-    protected array $event_status = [];
+    /** Interrupt routing as last written or read: the dispatcher reads these instead of the bus. */
+    protected ?ADXL343InterruptFunctions $_interrupt_enable = null;
 
-    protected array $enabled_interrupts = [];
+    protected ?ADXL343InterruptMap $_interrupt_map = null;
+
+    protected ?bool $_interrupt_active_low = null;
+
+    abstract public function transport(): ADXL34xDataTransport;
+
+    protected function sendCommand(ADXL343OpCode $register, array $command_data = []): int
+    {
+        return $this->transport()->write($register->value, $command_data);
+    }
+
+    protected function readData(ADXL343OpCode $register, int $length): array
+    {
+        return $this->transport()->read($register->value, $length);
+    }
 
     public function getDeviceId(): int
     {
         [$id] = $this->readData(ADXL343OpCode::DEVICE_ID_REGISTER, 1);
 
-        return $id;
+        return (int) $id;
     }
 
     public function getPowerControl(): ADXL343PowerControl
     {
-        $byte = $this->readData(ADXL343OpCode::POWER_CONTROL_REGISTER, 1)[0] ?? -1;
+        $byte = $this->readData(ADXL343OpCode::POWER_CONTROL_REGISTER, 1)[0];
 
         return ADXL343PowerControl::fromByte($byte);
+    }
+
+    public function setPowerControl(ADXL343PowerControl $power_control): void
+    {
+        $this->sendCommand(ADXL343OpCode::POWER_CONTROL_REGISTER, [$power_control->toByte()]);
     }
 
     public function getLinkMode(): bool
@@ -37,9 +64,33 @@ trait ADXL343API
         return $this->getPowerControl()->link;
     }
 
+    public function setLinkMode(bool $link_mode): void
+    {
+        $pwr_control = $this->getPowerControl();
+        $new_control = new $pwr_control(
+            $link_mode,
+            $pwr_control->measurement_mode,
+            $pwr_control->sleep_mode,
+            $pwr_control->wakeup,
+        );
+        $this->setPowerControl($new_control);
+    }
+
     public function getMeasurementMode(): bool
     {
         return $this->getPowerControl()->measurement_mode;
+    }
+
+    public function setMeasurementMode(bool $measurement_mode): void
+    {
+        $pwr_control = $this->getPowerControl();
+        $new_control = new $pwr_control(
+            $pwr_control->link,
+            $measurement_mode,
+            $pwr_control->sleep_mode,
+            $pwr_control->wakeup,
+        );
+        $this->setPowerControl($new_control);
     }
 
     public function getSleepMode(): bool
@@ -47,53 +98,278 @@ trait ADXL343API
         return $this->getPowerControl()->sleep_mode;
     }
 
+    public function setSleepMode(bool $sleep_mode): void
+    {
+        $pwr_control = $this->getPowerControl();
+        $new_control = new $pwr_control(
+            $pwr_control->link,
+            $pwr_control->measurement_mode,
+            $sleep_mode,
+            $pwr_control->wakeup,
+        );
+        $this->setPowerControl($new_control);
+    }
+
     public function getWakeup(): ADXL343SleepSamplingRate
     {
         return $this->getPowerControl()->wakeup;
     }
 
+    public function setWakeup(ADXL343SleepSamplingRate $wakeup): void
+    {
+        $pwr_control = $this->getPowerControl();
+        $new_control = new $pwr_control(
+            $pwr_control->link,
+            $pwr_control->measurement_mode,
+            $pwr_control->sleep_mode,
+            $wakeup
+        );
+        $this->setPowerControl($new_control);
+    }
+
     public function getEnabledInterrupts(): ADXL343InterruptFunctions
     {
-        $byte = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0] ?? -1;
+        $byte = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0];
 
-        return ADXL343InterruptFunctions::fromByte($byte);
+        return $this->_interrupt_enable = ADXL343InterruptFunctions::fromByte($byte);
+    }
+
+    public function setEnabledInterrupts(ADXL343InterruptFunctions $interrupts): void
+    {
+        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$interrupts->toByte()]);
+        $this->_interrupt_enable = $interrupts;
+    }
+
+    /** INT_MAP: which line each function fires on. */
+    public function getInterruptMap(): ADXL343InterruptMap
+    {
+        $byte = $this->readData(ADXL343OpCode::INTERRUPT_MAP_REGISTER, 1)[0];
+
+        return $this->_interrupt_map = ADXL343InterruptMap::fromByte($byte);
+    }
+
+    public function setInterruptMap(ADXL343InterruptMap $map): void
+    {
+        $this->sendCommand(ADXL343OpCode::INTERRUPT_MAP_REGISTER, [$map->toByte()]);
+        $this->_interrupt_map = $map;
+    }
+
+    /** INT_SOURCE: what has fired. Reading it clears single tap, double tap, activity, inactivity and free fall. */
+    public function getInterruptSource(): ADXL343InterruptFunctions
+    {
+        return ADXL343InterruptFunctions::fromByte($this->readData(ADXL343OpCode::INTERRUPT_SOURCE_REGISTER, 1)[0]);
+    }
+
+    /**
+     * Enable mask and line map, from the bus only the first time.
+     *
+     * @return array{ADXL343InterruptFunctions, ADXL343InterruptMap}
+     */
+    public function interruptRouting(): array
+    {
+        $enabled = $this->_interrupt_enable ?? $this->getEnabledInterrupts();
+
+        if ($enabled->functions() === []) {
+            return [$enabled, $this->_interrupt_map ?? ADXL343InterruptMap::none()];
+        }
+
+        return [$enabled, $this->_interrupt_map ?? $this->getInterruptMap()];
+    }
+
+    /** INT_INVERT from DATA_FORMAT, from the bus only the first time. */
+    public function interruptsActiveLow(): bool
+    {
+        return $this->_interrupt_active_low ?? $this->getDataFormat()->int_invert;
+    }
+
+    public function getTapThreshold(): int
+    {
+        return $this->readByte(ADXL343OpCode::THRESHOLD_TAP_REGISTER);
+    }
+
+    /** 62.5 mg per count. */
+    public function setTapThreshold(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::THRESHOLD_TAP_REGISTER, $value, 'tap_threshold');
+    }
+
+    public function getTapDuration(): int
+    {
+        return $this->readByte(ADXL343OpCode::DURATION_REGISTER);
+    }
+
+    /** 625 µs per count: the longest a tap may stay above threshold. */
+    public function setTapDuration(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::DURATION_REGISTER, $value, 'tap_duration');
+    }
+
+    public function getTapLatency(): int
+    {
+        return $this->readByte(ADXL343OpCode::LATENCY_REGISTER);
+    }
+
+    /** 1.25 ms per count: wait after a tap before the double-tap window opens. 0 disables double tap. */
+    public function setTapLatency(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::LATENCY_REGISTER, $value, 'tap_latency');
+    }
+
+    public function getTapWindow(): int
+    {
+        return $this->readByte(ADXL343OpCode::WINDOW_REGISTER);
+    }
+
+    /** 1.25 ms per count: how long the second tap may take. 0 disables double tap. */
+    public function setTapWindow(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::WINDOW_REGISTER, $value, 'tap_window');
+    }
+
+    public function getTapAxes(): ADXL343TapAxes
+    {
+        return ADXL343TapAxes::fromByte($this->readByte(ADXL343OpCode::TAP_AXES_REGISTER));
+    }
+
+    public function setTapAxes(ADXL343TapAxes $axes): void
+    {
+        $this->sendCommand(ADXL343OpCode::TAP_AXES_REGISTER, [$axes->toByte()]);
+    }
+
+    public function getActivityThreshold(): int
+    {
+        return $this->readByte(ADXL343OpCode::THRESHOLD_ACTIVITY_REGISTER);
+    }
+
+    /** 62.5 mg per count. */
+    public function setActivityThreshold(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::THRESHOLD_ACTIVITY_REGISTER, $value, 'activity_threshold');
+    }
+
+    public function getInactivityThreshold(): int
+    {
+        return $this->readByte(ADXL343OpCode::THRESHOLD_INACTIVITY_REGISTER);
+    }
+
+    /** 62.5 mg per count. */
+    public function setInactivityThreshold(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::THRESHOLD_INACTIVITY_REGISTER, $value, 'inactivity_threshold');
+    }
+
+    public function getInactivityTime(): int
+    {
+        return $this->readByte(ADXL343OpCode::TIME_INACTIVITY_REGISTER);
+    }
+
+    /** 1 s per count: how long motion must stay below the inactivity threshold. */
+    public function setInactivityTime(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::TIME_INACTIVITY_REGISTER, $value, 'inactivity_time');
+    }
+
+    public function getActivityControl(): ADXL343ActivityControl
+    {
+        return ADXL343ActivityControl::fromByte($this->readByte(ADXL343OpCode::ACTIVITY_AND_INACTIVITY_CONTROL_REGISTER));
+    }
+
+    public function setActivityControl(ADXL343ActivityControl $control): void
+    {
+        $this->sendCommand(ADXL343OpCode::ACTIVITY_AND_INACTIVITY_CONTROL_REGISTER, [$control->toByte()]);
+    }
+
+    public function getFreeFallThreshold(): int
+    {
+        return $this->readByte(ADXL343OpCode::THRESHOLD_FREE_FALL_REGISTER);
+    }
+
+    /** 62.5 mg per count; the datasheet recommends 300 mg to 600 mg (0x05 to 0x09). */
+    public function setFreeFallThreshold(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::THRESHOLD_FREE_FALL_REGISTER, $value, 'free_fall_threshold');
+    }
+
+    public function getFreeFallTime(): int
+    {
+        return $this->readByte(ADXL343OpCode::TIME_FREE_FALL_REGISTER);
+    }
+
+    /** 5 ms per count; the datasheet recommends 100 ms to 350 ms (0x14 to 0x46). */
+    public function setFreeFallTime(int $value): void
+    {
+        $this->writeByte(ADXL343OpCode::TIME_FREE_FALL_REGISTER, $value, 'free_fall_time');
+    }
+
+    protected function readByte(ADXL343OpCode $register): int
+    {
+        return $this->readData($register, 1)[0];
+    }
+
+    protected function writeByte(ADXL343OpCode $register, int $value, string $name): void
+    {
+        if ($value < 0 || $value > 0xFF) {
+            throw ADXL34xException::registerOutOfRange($name, $value);
+        }
+
+        $this->sendCommand($register, [$value]);
     }
 
     public function getDataRate(): ADXL343DataRate
     {
-        $register = $this->readData(ADXL343OpCode::BW_RATE_REGISTER, 1)[0] ?? -1;
+        $register = $this->readData(ADXL343OpCode::BW_RATE_REGISTER, 1)[0];
         $corrected = $register & 0x0F;
 
         return ADXL343DataRate::from($corrected);
     }
 
-    public function getRawX(): float
+    public function setDataRate(ADXL343DataRate $rate): void
     {
-        $data = $this->readData(ADXL343OpCode::DATA_FROM_X0_REGISTER, 6);
-
-        return $this->s16le($data[0] ?? 0, $data[1] ?? 0);
+        $this->sendCommand(ADXL343OpCode::BW_RATE_REGISTER, [$rate->value]);
     }
 
-    public function getRawY(): float
+    public function getDataFormat(): ADXL343DataFormat
     {
-        $data = $this->readData(ADXL343OpCode::DATA_FROM_X0_REGISTER, 6);
+        $format = ADXL343DataFormat::fromByte($this->readData(ADXL343OpCode::DATA_FORMAT_REGISTER, 1)[0]);
+        $this->_interrupt_active_low = $format->int_invert;
 
-        return $this->s16le($data[2] ?? 0, $data[3] ?? 0);
+        return $format;
     }
 
-    public function getRawZ(): float
+    public function setDataFormat(ADXL343DataFormat $format): void
     {
-        $data = $this->readData(ADXL343OpCode::DATA_FROM_X0_REGISTER, 6);
-
-        return $this->s16le($data[4] ?? 0, $data[5] ?? 0);
+        $this->sendCommand(ADXL343OpCode::DATA_FORMAT_REGISTER, [$format->toByte()]);
+        $this->_interrupt_active_low = $format->int_invert;
     }
 
     public function getRange(): ADXL343Range
     {
-        $register = $this->readData(ADXL343OpCode::DATA_FORMAT_REGISTER, 1)[0] ?? -1;
-        $corrected = $register & 0x03;
+        return $this->getDataFormat()->range;
+    }
 
-        return ADXL343Range::from($corrected);
+    /** Change the range and nothing else in DATA_FORMAT. */
+    public function setRange(ADXL343Range $range): void
+    {
+        $this->setDataFormat($this->getDataFormat()->withRange($range));
+    }
+
+    /** true = full resolution (3.9 mg/LSB at every range), false = 10-bit (LSB grows with range). */
+    public function getResolution(): bool
+    {
+        return $this->getDataFormat()->full_resolution;
+    }
+
+    public function setResolution(bool $full): void
+    {
+        $this->setDataFormat($this->getDataFormat()->withResolution($full));
+    }
+
+    /** g per LSB as the chip is configured right now: one bus read. */
+    public function scale(): float
+    {
+        $format = $this->getDataFormat();
+
+        return $format->full_resolution ? ADXL343Range::G2->scale() : $format->range->scale();
     }
 
     public function getOffset(): array
@@ -107,78 +383,6 @@ trait ADXL343API
         return [$x_offset, $y_offset, $z_offset];
     }
 
-    public function setPowerControl(ADXL343PowerControl $power_control): void
-    {
-        $this->sendCommand(ADXL343OpCode::POWER_CONTROL_REGISTER, [$power_control->toByte()]);
-    }
-
-    public function setLinkMode(bool $link_mode): void
-    {
-        $pwr_control = $this->getPowerControl();
-        $new_control = new $pwr_control(
-            $link_mode,
-            $pwr_control->measurement_mode,
-            $pwr_control->sleep_mode,
-            $pwr_control->wakeup,
-        );
-        $this->power_control = $new_control;
-    }
-
-    public function setMeasurementMode(bool $measurement_mode): void
-    {
-        $pwr_control = $this->getPowerControl();
-        $new_control = new $pwr_control(
-            $pwr_control->link,
-            $measurement_mode,
-            $pwr_control->sleep_mode,
-            $pwr_control->wakeup,
-        );
-        $this->power_control = $new_control;
-    }
-
-    public function setSleepMode(bool $sleep_mode): void
-    {
-        $pwr_control = $this->getPowerControl();
-        $new_control = new $pwr_control(
-            $pwr_control->link,
-            $pwr_control->measurement_mode,
-            $sleep_mode,
-            $pwr_control->wakeup,
-        );
-        $this->power_control = $new_control;
-    }
-
-    public function setWakeup(ADXL343SleepSamplingRate $wakeup): void
-    {
-        $pwr_control = $this->getPowerControl();
-        $new_control = new $pwr_control(
-            $pwr_control->link,
-            $pwr_control->measurement_mode,
-            $pwr_control->sleep_mode,
-            $wakeup
-        );
-        $this->power_control = $new_control;
-    }
-
-    public function setEnabledInterrupts(ADXL343InterruptFunctions $interrupts): void
-    {
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$interrupts->toByte()]);
-    }
-
-    public function setDataRate(ADXL343DataRate $rate): void
-    {
-        $this->sendCommand(ADXL343OpCode::BW_RATE_REGISTER, [$rate->value]);
-    }
-
-    public function setRange(ADXL343Range $range): void
-    {
-        $format_register = $this->getRange()->value;
-        $format_register &= ~0x0F;
-        $format_register |= $range->value;
-        $format_register |= 0x08;
-        $this->sendCommand(ADXL343OpCode::DATA_FORMAT_REGISTER, [$format_register]);
-    }
-
     public function setOffset(array $values): void
     {
         [$x_offset, $y_offset, $z_offset] = array_values($values);
@@ -187,29 +391,17 @@ trait ADXL343API
         $this->sendCommand(ADXL343OpCode::Z_OFFSET_REGISTER, [$z_offset]);
     }
 
-    /**
-     * One-shot hardware calibration: averages $samples readings while the
-     * sensor sits still in a known orientation, compares against what it
-     * *should* read (0g on the two flat axes, +/-1g on $vertical_axis),
-     * and nudges OFSX/OFSY/OFSZ so the chip compensates on every future
-     * read without any further software math.
-     *
-     * OFSX/OFSY/OFSZ are always 15.6 mg/LSB per the datasheet, regardless
-     * of the currently selected ADXL343Range - only DATA_FROM_X/Y/Z0 output
-     * scaling depends on range/full-res.
-     *
-     * @return array{0:int,1:int,2:int} the new offset register values written
-     */
     public function calibrate(AxisOrientation $vertical_axis = AxisOrientation::Z, int $samples = 32, int $delay_us = 20_000): array
     {
-        $scale = $this->getRange()->scale();
+        $scale = $this->scale();
         $offset_scale = 0.0156;
 
         $totals = ['x' => 0.0, 'y' => 0.0, 'z' => 0.0];
         for ($i = 0; $i < $samples; $i++) {
-            $totals['x'] += $this->getRawX();
-            $totals['y'] += $this->getRawY();
-            $totals['z'] += $this->getRawZ();
+            $raw = $this->raw();
+            $totals['x'] += $raw['x'];
+            $totals['y'] += $raw['y'];
+            $totals['z'] += $raw['z'];
             usleep($delay_us);
         }
 
@@ -250,106 +442,40 @@ trait ADXL343API
         return $offsets;
     }
 
+    /**
+     * All three axes from one six-byte burst read, signed little-endian counts.
+     *
+     * @return array{x: int, y: int, z: int}
+     */
+    public function raw(): array
+    {
+        $data = $this->readData(ADXL343OpCode::DATA_FROM_X0_REGISTER, 6);
+
+        return [
+            'x' => $this->s16le($data[0], $data[1]),
+            'y' => $this->s16le($data[2], $data[3]),
+            'z' => $this->s16le($data[4], $data[5]),
+        ];
+    }
+
+    public function getRawX(): int
+    {
+        return $this->raw()['x'];
+    }
+
+    public function getRawY(): int
+    {
+        return $this->raw()['y'];
+    }
+
+    public function getRawZ(): int
+    {
+        return $this->raw()['z'];
+    }
+
     private static function clampOffsetByte(int $value): int
     {
         return max(-128, min(127, $value));
     }
 
-    public function getEvents(): array
-    {
-        $interrupt_source_register = $this->readData(ADXL343OpCode::INTERRUPT_SOURCE_REGISTER, 1)[0] ?? 0;
-        $this->event_status = [];
-
-        foreach ($this->enabled_interrupts as $event_type => $value) {
-            if ($event_type === 'motion') {
-                $this->event_status[$event_type] = ($interrupt_source_register & 0b00010000) > 0;
-            }
-            if ($event_type === 'tap') {
-                if ($value === 1) {
-                    $this->event_status[$event_type] = ($interrupt_source_register & 0b01000000) > 0;
-                } else {
-                    $this->event_status[$event_type] = ($interrupt_source_register & 0b00100000) > 0;
-                }
-            }
-            if ($event_type === 'freefall') {
-                $this->event_status[$event_type] = ($interrupt_source_register & 0b00000100) > 0;
-            }
-        }
-
-        return $this->event_status;
-    }
-
-    public function setMotionDetection(bool $flag): void
-    {
-        $flag ? $this->enableMotionDetection() : $this->disableMotionDetection();
-    }
-
-    protected function enableMotionDetection(): void
-    {
-        $active_interrupts = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0] ?? 0;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [0x0]);
-        $this->sendCommand(ADXL343OpCode::ACTIVITY_AND_INACTIVITY_CONTROL_REGISTER, [0b01110000]);
-        $this->sendCommand(ADXL343OpCode::THRESHOLD_ACTIVITY_REGISTER, [18]);
-        $active_interrupts |= 0b00010000;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$active_interrupts]);
-        $this->enabled_interrupts['motion'] = true;
-    }
-
-    protected function disableMotionDetection(): void
-    {
-        $active_interrupts = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0] ?? 0;
-        $active_interrupts &= ~0b00010000;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$active_interrupts]);
-        unset($this->enabled_interrupts['motion']);
-    }
-
-    public function setFreefallDetection(bool $flag): void
-    {
-        $flag ? $this->enableFreefallDetection() : $this->disableFreefallDetection();
-    }
-
-    protected function enableFreefallDetection(): void
-    {
-        $active_interrupts = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0] ?? 0;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [0x0]);
-        $this->sendCommand(ADXL343OpCode::THRESHOLD_FREE_FALL_REGISTER, [10]);
-        $this->sendCommand(ADXL343OpCode::TIME_FREE_FALL_REGISTER, [25]);
-        $active_interrupts |= 0b00000100;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$active_interrupts]);
-        $this->enabled_interrupts['freefall'] = true;
-    }
-
-    protected function disableFreefallDetection(): void
-    {
-        $active_interrupts = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0] ?? 0;
-        $active_interrupts &= ~0b00000100;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$active_interrupts]);
-        unset($this->enabled_interrupts['freefall']);
-    }
-
-    public function setTapDetection(bool $flag): void
-    {
-        $flag ? $this->enableTapDetection() : $this->disableTapDetection();
-    }
-
-    protected function enableTapDetection(): void
-    {
-        $active_interrupts = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0] ?? 0;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [0x0]);
-        $this->sendCommand(ADXL343OpCode::TAP_AXES_REGISTER, [0b00000111]);
-        $this->sendCommand(ADXL343OpCode::THRESHOLD_TAP_REGISTER, [20]);
-        $this->sendCommand(ADXL343OpCode::DURATION_REGISTER, [50]);
-        $active_interrupts |= 0b01000000;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$active_interrupts]);
-        $this->enabled_interrupts['tap'] = 1;
-    }
-
-    protected function disableTapDetection(): void
-    {
-        $active_interrupts = $this->readData(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, 1)[0] ?? 0;
-        $active_interrupts &= ~0b01000000;
-        $active_interrupts &= ~0b00100000;
-        $this->sendCommand(ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER, [$active_interrupts]);
-        unset($this->enabled_interrupts['tap']);
-    }
 }
