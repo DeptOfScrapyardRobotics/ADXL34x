@@ -26,6 +26,7 @@ return [
             'driver' => 'none',
             'device' => '',
             'chip_select' => 0,
+            'speed' => 5_000_000,
             'int1' => [
                 'enabled' => false,
                 'driver' => 'none',

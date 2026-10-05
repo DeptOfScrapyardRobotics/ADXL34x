@@ -1,20 +1,23 @@
 ---
-type: Guide
-title: Reading acceleration
-description: acceleration(), raw(), scale() and the axis readers — units, transactions per call, and how scale follows the chip's mode.
-tags: [acceleration, raw, scale, units]
+type: Reference
+title: Reading
+description: acceleration(), raw(), scale(), axis readers, samples per call, CelestialBody scaling.
+tags: [acceleration, raw, scale, axes]
 status: draft
-generated: { by: claude-opus-5/claude-code, at: "2026-09-16T00:00:00Z" }
+generated: { by: claude-opus/5.5, at: 2026-10-04T17:49:45Z }
 sources:
   - id: api
     resource: src/ADXL345/Concerns/ADXL345API.php
     title: ADXL345API
-  - id: bootstrap
-    resource: src/ADXL345/Concerns/ADXL345Bootsrap.php
-    title: ADXL345Bootsrap
   - id: range
     resource: src/ADXL345/Enums/ADXL345Range.php
     title: ADXL345Range
+  - id: body
+    resource: src/Enums/CelestialBody.php
+    title: CelestialBody
+  - id: chip
+    resource: src/ADXL345/ADXL345.php
+    title: ADXL345
 ---
 
 # Calls
@@ -29,6 +32,8 @@ sources:
 
 Axes: little-endian signed 16-bit from DATAX0..DATAZ1.[^api]
 
+One sample per call: `$adxl->x; $adxl->y; $adxl->z;` = 3 samples, 6 transactions, axes from different moments. Same for `getRawX/Y/Z`. Axes that must agree → `acceleration()` or `raw()`.[^chip]
+
 # Scale
 
 `scale()` reads DATA_FORMAT every call:[^api]
@@ -36,16 +41,13 @@ Axes: little-endian signed 16-bit from DATAX0..DATAZ1.[^api]
 - FULL_RES set → `ADXL345Range::G2->scale()` = 0.0039 g/count, any range
 - FULL_RES clear → range step: 0.0039 / 0.0078 / 0.0156 / 0.0313[^range]
 
-m/s² = counts × scale × `CelestialBody::TERRA->gravity()` (9.8067).[^bootstrap]
-
-# Live reference
-
-FT232H, board flat, calibrated, ±2 g 10-bit: raw z 258 → 1.006 g → 9.944 m/s².
+m/s² = counts × scale × `$body->gravity()`. Counts × scale = standard g; `TERRA` (9.8067) → m/s². Another body multiplies by its own surface gravity: not the measured acceleration in m/s². For g: `raw()` × `scale()`.[^body]
 
 # Related
 
-* [chip-settings](/chip-settings.md) · [traps/sample-per-call](/traps/sample-per-call.md) · [traps/celestial-body-scale](/traps/celestial-body-scale.md)
+* [chip-settings](/chip-settings.md) · [overview](/overview.md)
 
 [^api]: ADXL345API
-[^bootstrap]: ADXL345Bootsrap
 [^range]: ADXL345Range
+[^body]: CelestialBody
+[^chip]: ADXL345

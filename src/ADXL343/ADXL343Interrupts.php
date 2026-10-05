@@ -6,9 +6,9 @@ use Closure;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343InterruptFunctions;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343InterruptMap;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343InterruptFunction;
-use GeneralPurposeIO\Contracts\Core\GPIOResourceDriver;
-use GeneralPurposeIO\Contracts\Core\Recurrence;
 use GeneralPurposeIO\Contracts\Digital\DigitalInTransport;
+use Voyager\Contracts\IOPools\Loop;
+use Voyager\Contracts\IOPools\LoopResources\Timer;
 
 /**
  * Delivers the chip's interrupt functions to handlers.
@@ -19,7 +19,7 @@ use GeneralPurposeIO\Contracts\Digital\DigitalInTransport;
  * it does not hold is polled: INT_SOURCE is read on every poll. One
  * INT_SOURCE read dispatches every enabled function it reports.
  *
- * poll() never waits. wait() blocks. every() puts poll() on the gpio dock.
+ * poll() never waits. wait() blocks. every() runs poll() on an event loop timer.
  * All three share this dispatcher, so they interleave freely.
  */
 final class ADXL343Interrupts
@@ -149,10 +149,20 @@ final class ADXL343Interrupts
         }
     }
 
-    /** Put poll() on the gpio dock; each run's completion carries that run's events. */
-    public function every(GPIOResourceDriver $gpio, int $ticks = 1): Recurrence
+    /**
+     * Run poll() on the loop every $interval_s, as a timer named after this dispatcher; handlers get what each
+     * run finds. On a wired line a run reads no register unless the line edged. Calling it again under the same
+     * name replaces the timer.
+     */
+    public function every(Loop $loop, float $interval_s = 0.01): Timer
     {
-        return $gpio->every($this->name, fn (): array => $this->poll(), $ticks);
+        return $loop->every($interval_s, fn (): array => $this->poll(), $this->name);
+    }
+
+    /** Take the every() timer off the loop. */
+    public function stop(Loop $loop): void
+    {
+        $loop->forget($this->name);
     }
 
     /**

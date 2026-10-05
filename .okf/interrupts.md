@@ -1,11 +1,10 @@
 ---
 type: Guide
 title: Interrupts
-description: Subscribe to the chip's interrupt functions through $adxl->interrupts() — edge-driven on wired INT lines, INT_SOURCE polling on unwired ones, blocking wait() or dock every() interchangeably.
-tags: [interrupts, int1, int2, data-ready, tap, activity, free-fall, io-pools]
+description: Subscribe to the chip's interrupt functions through $adxl->interrupts() — edge-driven on wired INT lines, INT_SOURCE polling on unwired ones, poll(), blocking wait() or an event-loop timer interchangeably.
+tags: [interrupts, int1, int2, data-ready, tap, activity, free-fall, event-loop]
 status: draft
-generated: { by: claude-opus-5/claude-code, at: "2026-09-16T00:00:00Z" }
-revised: { by: claude-opus-5/claude-code, at: "2026-09-16T00:00:00Z", note: "dispatcher, INT_MAP, INT_SOURCE, event registers" }
+generated: { by: claude-opus/5.5, at: 2026-10-04T17:49:45Z }
 sources:
   - id: interrupts
     resource: src/ADXL345/ADXL345Interrupts.php
@@ -25,6 +24,9 @@ sources:
   - id: tests
     resource: tests/ADXL345/ADXL345InterruptsTest.php
     title: interrupt tests
+  - id: digital-input
+    resource: vendor/gpio/digital/DigitalInputTransport.php
+    title: gpio/digital DigitalInputTransport — one unread-edge queue per pin
 ---
 
 # Pieces
@@ -50,7 +52,7 @@ sources:
 4. no unwired routed line and no edge → return, zero reads.
 5. else one INT_SOURCE read → every fired **enabled** function → event (pin from map, timestamp = that line's edge or `hrtime`) → handlers inline.[^interrupts]
 
-Returns events dispatched.
+Returns events dispatched. Edge timestamp: kernel CLOCK_MONOTONIC on Linux, MPSSE sample time on FT232H (10 ms sampling → event gaps jitter ± one sample).
 
 # Cache
 
@@ -58,13 +60,28 @@ API trait keeps `_interrupt_enable`, `_interrupt_map`, `_interrupt_active_low`. 
 
 # wait(timeout_ms, poll_interval_us = 1_000)
 
-Loop: `poll()`; events → return. Exactly one routed line and it wired → `listen(remaining ms)` on it; edge → INT_SOURCE → dispatch. Else `usleep(min(interval, remaining))`. Deadline → `[]`.
+Loop: `poll()`; events → return. Exactly one routed line and it wired → `listen(remaining ms)` on it; edge → INT_SOURCE → dispatch. Else `usleep(min(interval, remaining))`. Deadline → `[]`. With a loop bound to the pin's driver, the pin's `listen()` suspends a fiber or borrows the loop (framework behaviour).
 
-# every(GPIOResourceDriver $gpio, int $ticks = 1)
+# every(Loop $loop, float $interval_s = 0.01): Timer
 
-`$gpio->every($this->name, fn () => $this->poll(), $ticks)` → `Recurrence`. Default name `adxl345.interrupts` (`adxl343.interrupts`). Completion result = events.
+`$loop->every($interval_s, fn () => $this->poll(), $this->name)`. Default name `adxl345.interrupts` / `adxl343.interrupts`; `interrupts('left.adxl345')` renames, so two chips keep two timers. Same name again replaces the timer (loop registry). `stop(Loop)` → `$loop->forget($name)`. Handlers are the delivery; the timer drops poll()'s return value.[^interrupts]
+
+App loop: `app('event-loop')`. Wired line → a tick reads nothing unless the line edged.
 
 poll / wait / every share handlers + dispatcher → interleave freely.[^tests]
+
+# Clearing
+
+INT_SOURCE read clears single tap, double tap, activity, inactivity, free fall. DATA_READY, watermark, overrun clear only on data read.
+
+- polled line, handler not reading data → `data_ready` event every check
+- wired line, data unread → line stays asserted → no new edge → no further events
+
+DATA_READY handler reads data (`acceleration()` / `raw()`). One INT_SOURCE read serves both lines, so the dispatcher emits every enabled fired function, including ones routed to a wired line not yet edged. Latched functions: once. Level functions: may come again on that line's edge if data still unread.
+
+# Shared INT line
+
+gpio/digital 0.10 keeps one unread-edge queue per pin; `pollEdges()` / `listen()` take from it, `watch()` mails a copy and leaves it queued.[^digital-input] App can `watch()` a wired INT line without starving the dispatcher. (0.8 dock: both drained the same edges.)
 
 # Event registers
 
@@ -86,11 +103,16 @@ Int properties: 0–255 else `registerOutOfRange`.[^api] Tap / activity / free f
 
 # Live reference
 
-FT232H, INT1 unwired, 12.5 Hz, DATA_READY + handler reading data: `wait()` returned once per sample, 75–81 ms apart; dock `every()` 5 samples / 400 ms, interleaved with `wait()`; disabling mid-run silenced handler.
+12.5 Hz, DATA_READY + handler reading data:
+
+| Bench | Routing | wait() gaps | every() 2 s |
+|---|---|---|---|
+| Pi 5, ADXL343 I2C, INT1 → GPIO24 | INT1: 7 edges / 600 ms; INT2: 0 on GPIO24 | 78.6 ms steady | 25 events |
+| FT232H, ADXL345 SPI, INT1 → D5, INT2 → D6 | each line edges only its own pin | 68–83 ms (sampled) | 26 events |
 
 # Related
 
-* [traps/level-interrupts-repeat](/traps/level-interrupts-repeat.md) · [traps/shared-int-line](/traps/shared-int-line.md) · [chip-settings](/chip-settings.md) · [dock-sampling](/dock-sampling.md)
+* [chip-settings](/chip-settings.md) · [connecting](/connecting.md) · [hardware smoke](/runbooks/hardware-smoke.md)
 
 [^interrupts]: ADXL345Interrupts
 [^event]: ADXL345InterruptEvent
@@ -98,3 +120,4 @@ FT232H, INT1 unwired, 12.5 Hz, DATA_READY + handler reading data: `wait()` retur
 [^api]: ADXL345API — routing cache, INT_MAP, INT_SOURCE, event registers
 [^transport]: ADXL34xDataTransport::interruptPin()
 [^tests]: interrupt tests
+[^digital-input]: gpio/digital DigitalInputTransport — one unread-edge queue per pin

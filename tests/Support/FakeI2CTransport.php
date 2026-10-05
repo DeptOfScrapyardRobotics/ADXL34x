@@ -63,4 +63,9 @@ final class FakeI2CTransport extends I2CTransport
     {
         $this->closed = true;
     }
+
+    protected function release(): void
+    {
+        $this->closed = true;
+    }
 }

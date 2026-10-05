@@ -3,6 +3,7 @@
 namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Concerns;
 
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343PowerControl;
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343OpCode;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL34xException;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\Enums\CelestialBody;
 
@@ -87,6 +88,7 @@ trait ADXL343Bootsrap
     {
         $this->confirmDeviceId();
         $this->setupPowerControl();
+        $this->awaitFirstSample();
         $this->setInterruptPinFunctions();
     }
 
@@ -102,6 +104,28 @@ trait ADXL343Bootsrap
     protected function setupPowerControl(): void
     {
         $this->power_control = new ADXL343PowerControl(measurement_mode: true, sleep_mode: false);
+    }
+
+    /**
+     * Until the first conversion in measurement mode lands, 1/ODR + 1.1 ms after the MEASURE bit, the data
+     * registers hold zeros after power-up or the last sample taken before standby. Boot returns once DATA_READY
+     * reports a fresh one, so the first read after boot is a real sample. DATA_READY is set whatever INT_ENABLE
+     * says, and reading the data clears it, so a sample left over from before standby is cleared first.
+     */
+    protected function awaitFirstSample(): void
+    {
+        $this->readData(ADXL343OpCode::DATA_FROM_X0_REGISTER, 6);
+        $rate = $this->getDataRate();
+        $budget_ns = (int) ceil(2e9 / $rate->hz()) + 2_000_000;
+        $deadline = hrtime(true) + $budget_ns;
+
+        while (! $this->getInterruptSource()->data_ready) {
+            if (hrtime(true) >= $deadline) {
+                throw ADXL34xException::noFirstSample($rate->hz(), intdiv($budget_ns, 1_000_000));
+            }
+
+            usleep(500);
+        }
     }
 
     protected function setInterruptPinFunctions(): void

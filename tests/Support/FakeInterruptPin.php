@@ -49,4 +49,26 @@ final class FakeInterruptPin extends DigitalInputTransport
     {
         $this->closed = true;
     }
+
+    protected function drainEdges(): array
+    {
+        return [];
+    }
+
+    protected function awaitEdges(int $timeout_ms): void {}
+
+    protected function edgeStreams(): array
+    {
+        return [];
+    }
+
+    protected function samplingInterval(): ?float
+    {
+        return null;
+    }
+
+    protected function release(): void
+    {
+        $this->closed = true;
+    }
 }

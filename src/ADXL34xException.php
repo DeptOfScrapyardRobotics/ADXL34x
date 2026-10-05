@@ -40,4 +40,24 @@ class ADXL34xException extends CircuitException
     {
         return new static("ADXL34x has INT1 and INT2; there is no INT{$pin}.");
     }
+
+    public static function noFirstSample(float $rate_hz, int $waited_ms): static
+    {
+        return new static("ADXL34x took no sample within {$waited_ms} ms of entering measurement mode at {$rate_hz} Hz.");
+    }
+
+    public static function notConnected(string $protocol, string $driver, string|int $device): static
+    {
+        return new static("ADXL34x: the {$driver} {$protocol} driver could not connect device {$device}.");
+    }
+
+    public static function spiClockOutOfRange(int $hz): static
+    {
+        return new static("ADXL34x SPI runs at 1 Hz to 5 MHz; got {$hz} Hz.");
+    }
+
+    public static function wrongSpiMode(string|int $device, int $mode): static
+    {
+        return new static("ADXL34x needs SPI mode 3, but bus {$device} was opened in mode {$mode}.");
+    }
 }

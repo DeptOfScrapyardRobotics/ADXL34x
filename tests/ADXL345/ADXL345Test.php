@@ -29,7 +29,7 @@ function adxl(array $replies = []): array
 /** @return array{0: ADXL345, 1: FakeI2CTransport} a booted chip, boot replies consumed */
 function bootedAdxl(array $replies = []): array
 {
-    [$chip, $bus] = adxl([[0xE5], ...$replies]);
+    [$chip, $bus] = adxl([...bootI2CReplies(), ...$replies]);
     $chip->boot();
 
     return [$chip, $bus];
@@ -43,14 +43,28 @@ it('is a bootable sensor that exposes its transport', function (): void {
         ->and($chip->transport())->toBeInstanceOf(ADXL34xI2CTransport::class);
 });
 
-it('boots by confirming 0xE5, entering measurement mode, and applying the interrupt mask', function (): void {
-    [$chip, $bus] = adxl([[0xE5]]);
+it('boots by confirming 0xE5, entering measurement mode, waiting for the first sample, and applying the interrupt mask', function (): void {
+    [$chip, $bus] = adxl(bootI2CReplies());
 
     $chip->boot();
 
     expect($chip->hasBooted())->toBeTrue()
-        ->and($bus->write_reads)->toBe([[[DEVID], 1]])
+        ->and($bus->write_reads)->toBe([[[DEVID], 1], [[DATAX0], 6], [[0x2C], 1], [[0x30], 1]])
         ->and($bus->writes)->toBe([[POWER_CTL, 0b0000_1000], [INT_ENABLE, 0x00]]);
+});
+
+it('keeps reading INT_SOURCE through boot until DATA_READY reports a fresh sample', function (): void {
+    [$chip, $bus] = adxl([[0xE5], [0, 0, 0, 0, 0, 0], [0x0A], [0x00], [0x02], [0x80]]);
+
+    $chip->boot();
+
+    expect(array_map(fn (array $wr): int => $wr[0][0], $bus->write_reads))->toBe([0x00, 0x32, 0x2C, 0x30, 0x30, 0x30]);
+});
+
+it('gives up on boot after two sample periods without DATA_READY', function (): void {
+    [$chip] = adxl([[0xE5], [0, 0, 0, 0, 0, 0], [0x0F], ...array_fill(0, 10_000, [0x00])]);
+
+    expect(fn () => $chip->boot())->toThrow(ADXL34xException::class, 'no sample within 2 ms of entering measurement mode at 3200');
 });
 
 it('refuses a chip that does not answer 0xE5', function (): void {
@@ -65,7 +79,7 @@ it('reads all three axes in one six-byte transaction, little-endian signed', fun
     $raw = $chip->raw();
 
     expect($raw)->toBe(['x' => 16, 'y' => -16, 'z' => 256])
-        ->and(array_slice($bus->write_reads, 1))->toBe([[[DATAX0], 6]]);
+        ->and(array_slice($bus->write_reads, BOOT_READS))->toBe([[[DATAX0], 6]]);
 });
 
 it('reads the DATA_FORMAT register as a breakout, including range and resolution', function (): void {
@@ -124,7 +138,7 @@ it('reads all three accelerations from one transaction', function (): void {
     expect($acceleration['x'])->toEqualWithDelta(256 * $scale * $g, 1e-9)
         ->and($acceleration['y'])->toEqualWithDelta(512 * $scale * $g, 1e-9)
         ->and($acceleration['z'])->toEqualWithDelta(768 * $scale * $g, 1e-9)
-        ->and(array_slice($bus->write_reads, 1))->toBe([[[DATA_FORMAT], 1], [[DATAX0], 6]]);
+        ->and(array_slice($bus->write_reads, BOOT_READS))->toBe([[[DATA_FORMAT], 1], [[DATAX0], 6]]);
 });
 
 it('exposes the chip through properties, and refuses ones it does not have', function (): void {
@@ -152,7 +166,7 @@ it('turns a short bus read into an exception', function (): void {
 
 it('releases its interrupt pins on close and leaves the bus connection to its driver', function (): void {
     $bus = new FakeI2CTransport;
-    $bus->replies = [[0xE5]];
+    $bus->replies = bootI2CReplies();
     $int1 = new FakeInterruptPin(4);
     $chip = new ADXL345(new ADXL34xI2CTransport($bus, $int1), boot_now: true);
 

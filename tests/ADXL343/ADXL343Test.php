@@ -25,7 +25,7 @@ function adxl343(array $replies = []): array
 /** @return array{0: ADXL343, 1: FakeI2CTransport} a booted chip, boot replies consumed */
 function bootedAdxl343(array $replies = []): array
 {
-    [$chip, $bus] = adxl343([[0xE5], ...$replies]);
+    [$chip, $bus] = adxl343([...bootI2CReplies(), ...$replies]);
     $chip->boot();
 
     return [$chip, $bus];
@@ -39,14 +39,28 @@ it('is a bootable sensor that exposes its transport', function (): void {
         ->and($chip->transport())->toBeInstanceOf(ADXL34xI2CTransport::class);
 });
 
-it('boots by confirming 0xE5, entering measurement mode, and applying the interrupt mask', function (): void {
-    [$chip, $bus] = adxl343([[0xE5]]);
+it('boots by confirming 0xE5, entering measurement mode, waiting for the first sample, and applying the interrupt mask', function (): void {
+    [$chip, $bus] = adxl343(bootI2CReplies());
 
     $chip->boot();
 
     expect($chip->hasBooted())->toBeTrue()
-        ->and($bus->write_reads)->toBe([[[ADXL343OpCode::DEVICE_ID_REGISTER->value], 1]])
+        ->and($bus->write_reads)->toBe([[[ADXL343OpCode::DEVICE_ID_REGISTER->value], 1], [[ADXL343OpCode::DATA_FROM_X0_REGISTER->value], 6], [[ADXL343OpCode::BW_RATE_REGISTER->value], 1], [[ADXL343OpCode::INTERRUPT_SOURCE_REGISTER->value], 1]])
         ->and($bus->writes)->toBe([[ADXL343OpCode::POWER_CONTROL_REGISTER->value, 0b0000_1000], [ADXL343OpCode::INTERRUPTS_ENABLED_REGISTER->value, 0x00]]);
+});
+
+it('keeps reading INT_SOURCE through boot until DATA_READY reports a fresh sample', function (): void {
+    [$chip, $bus] = adxl343([[0xE5], [0, 0, 0, 0, 0, 0], [0x0A], [0x00], [0x02], [0x80]]);
+
+    $chip->boot();
+
+    expect(array_map(fn (array $wr): int => $wr[0][0], $bus->write_reads))->toBe([0x00, 0x32, 0x2C, 0x30, 0x30, 0x30]);
+});
+
+it('gives up on boot after two sample periods without DATA_READY', function (): void {
+    [$chip] = adxl343([[0xE5], [0, 0, 0, 0, 0, 0], [0x0F], ...array_fill(0, 10_000, [0x00])]);
+
+    expect(fn () => $chip->boot())->toThrow(ADXL34xException::class, 'no sample within 2 ms of entering measurement mode at 3200');
 });
 
 it('refuses a chip that does not answer 0xE5', function (): void {
@@ -61,7 +75,7 @@ it('reads all three axes in one six-byte transaction, little-endian signed', fun
     $raw = $chip->raw();
 
     expect($raw)->toBe(['x' => 16, 'y' => -16, 'z' => 256])
-        ->and(array_slice($bus->write_reads, 1))->toBe([[[ADXL343OpCode::DATA_FROM_X0_REGISTER->value], 6]]);
+        ->and(array_slice($bus->write_reads, BOOT_READS))->toBe([[[ADXL343OpCode::DATA_FROM_X0_REGISTER->value], 6]]);
 });
 
 it('reads the ADXL343OpCode::DATA_FORMAT_REGISTER->value register as a breakout, including range and resolution', function (): void {
@@ -120,7 +134,7 @@ it('reads all three accelerations from one transaction', function (): void {
     expect($acceleration['x'])->toEqualWithDelta(256 * $scale * $g, 1e-9)
         ->and($acceleration['y'])->toEqualWithDelta(512 * $scale * $g, 1e-9)
         ->and($acceleration['z'])->toEqualWithDelta(768 * $scale * $g, 1e-9)
-        ->and(array_slice($bus->write_reads, 1))->toBe([[[ADXL343OpCode::DATA_FORMAT_REGISTER->value], 1], [[ADXL343OpCode::DATA_FROM_X0_REGISTER->value], 6]]);
+        ->and(array_slice($bus->write_reads, BOOT_READS))->toBe([[[ADXL343OpCode::DATA_FORMAT_REGISTER->value], 1], [[ADXL343OpCode::DATA_FROM_X0_REGISTER->value], 6]]);
 });
 
 it('exposes the chip through properties, and refuses ones it does not have', function (): void {
@@ -148,7 +162,7 @@ it('turns a short bus read into an exception', function (): void {
 
 it('releases its interrupt pins on close and leaves the bus connection to its driver', function (): void {
     $bus = new FakeI2CTransport;
-    $bus->replies = [[0xE5]];
+    $bus->replies = bootI2CReplies();
     $int1 = new FakeInterruptPin(4);
     $chip = new ADXL343(new ADXL34xI2CTransport($bus, $int1), boot_now: true);
 
@@ -156,4 +170,10 @@ it('releases its interrupt pins on close and leaves the bus connection to its dr
 
     expect($int1->closed)->toBeTrue()
         ->and($bus->closed)->toBeFalse();
+});
+
+it('names the sleep sampling rates as the datasheet sets them: 0b11 is 1 Hz', function (): void {
+    expect(DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343SleepSamplingRate::from(0b11))
+        ->toBe(DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343SleepSamplingRate::SLEEP_1HZ)
+        ->and(DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Enums\ADXL345SleepSamplingRate::SLEEP_1HZ->value)->toBe(0b11);
 });

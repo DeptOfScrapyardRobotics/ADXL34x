@@ -2,6 +2,7 @@
 
 namespace DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345;
 
+use DeptOfScrapyardRobotics\Sensors\ADXL34x\Concerns\ConjuresADXL34x;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\Enums\CelestialBody;
 use GeneralPurposeIO\Contracts\IntegratedCircuits\Sensor;
 use GeneralPurposeIO\IntegratedCircuits\Bootable;
@@ -12,6 +13,7 @@ use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL345\Breakouts\ADXL345InterruptFu
 class ADXL345 extends Bootable implements Sensor
 {
     use ADXL345Bootsrap;
+    use ConjuresADXL34x;
 
     protected int $hardwired_device_id = 0xE5;
 
@@ -63,7 +65,7 @@ class ADXL345 extends Bootable implements Sensor
         ];
     }
 
-    /** The chip's interrupt dispatcher. Pass a name to key its dock recurrence when several chips share one dock. */
+    /** The chip's interrupt dispatcher. Pass a name to key its loop timer when several chips share one loop. */
     public function interrupts(?string $name = null): ADXL345Interrupts
     {
         $this->interrupts ??= new ADXL345Interrupts($this);

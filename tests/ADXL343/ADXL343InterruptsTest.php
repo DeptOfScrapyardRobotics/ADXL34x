@@ -10,13 +10,12 @@ use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Breakouts\ADXL343TapAxes;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343InterruptFunction;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL343\Enums\ADXL343OpCode;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\ADXL34xException;
-use DeptOfScrapyardRobotics\Sensors\ADXL34x\Tests\Support\FakeGPIOResource;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\Tests\Support\FakeI2CTransport;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\Tests\Support\FakeInterruptPin;
 use DeptOfScrapyardRobotics\Sensors\ADXL34x\Transports\ADXL34xI2CTransport;
-use GeneralPurposeIO\Contracts\Core\Recurrence;
 use GeneralPurposeIO\Contracts\Digital\DigitalEdgeEvent;
 use GeneralPurposeIO\Contracts\Digital\SignalEdge;
+use Voyager\Contracts\IOPools\LoopResources\Timer;
 
 /*
 | Replies are consumed in the order the driver reads after boot:
@@ -30,7 +29,7 @@ use GeneralPurposeIO\Contracts\Digital\SignalEdge;
 function interruptChip343(ADXL343InterruptFunctions $enabled, ?FakeInterruptPin $int1 = null, ?FakeInterruptPin $int2 = null, array $replies = []): array
 {
     $bus = new FakeI2CTransport;
-    $bus->replies = [[0xE5], ...$replies];
+    $bus->replies = [...bootI2CReplies(), ...$replies];
     $chip = new ADXL343(new ADXL34xI2CTransport($bus, $int1, $int2), $enabled, boot_now: true);
 
     return [$chip, $bus];
@@ -39,12 +38,12 @@ function interruptChip343(ADXL343InterruptFunctions $enabled, ?FakeInterruptPin 
 /** @return list<int> the register of every read after the DEVID check */
 function registersReadAfterBoot343(FakeI2CTransport $bus): array
 {
-    return array_map(fn (array $wr): int => $wr[0][0], array_slice($bus->write_reads, 1));
+    return array_map(fn (array $wr): int => $wr[0][0], array_slice($bus->write_reads, BOOT_READS));
 }
 
 function risingEdgeAt343(int $timestamp_ns): DigitalEdgeEvent
 {
-    return new DigitalEdgeEvent(SignalEdge::RISING, $timestamp_ns);
+    return new DigitalEdgeEvent('bench', 17, SignalEdge::RISING, $timestamp_ns, 1);
 }
 
 /** @param list<ADXL343InterruptEvent> $events */
@@ -285,44 +284,56 @@ it('wait() polls rather than blocking on one line when both lines are wired', fu
         ->and(count($int1->polls))->toBeGreaterThan(1);
 });
 
-// --- dock -----------------------------------------------------------------------------
+// --- event loop -------------------------------------------------------------------------
 
-it('every() registers poll() as a recurrence under the interrupts name', function (): void {
+it('every() runs poll() on a loop timer named after the dispatcher, handlers receiving what it finds', function (): void {
     [$chip] = interruptChip343(new ADXL343InterruptFunctions(data_ready: true), replies: [[0x00], [0x80]]);
-    $gpio = new FakeGPIOResource;
-    $seen = 0;
-    $chip->interrupts()->on(ADXL343InterruptFunction::DATA_READY, function () use (&$seen): void { $seen++; });
+    $loop = testLoop();
+    $seen = [];
+    $chip->interrupts()->on(ADXL343InterruptFunction::DATA_READY, function (ADXL343InterruptEvent $e) use (&$seen, $loop): void {
+        $seen[] = $e;
+        $loop->stop();
+    });
 
-    $recurrence = $chip->interrupts()->every($gpio, ticks: 3);
-    $events = $gpio->runRecurrence('adxl343.interrupts');
+    $timer = $chip->interrupts()->every($loop, 0.001);
+    $loop->run();
 
-    expect($recurrence)->toBeInstanceOf(Recurrence::class)
-        ->and($recurrence->ticks)->toBe(3)
-        ->and($gpio->recurring('adxl343.interrupts'))->toBe($recurrence)
-        ->and(firedAs343($events))->toBe([[ADXL343InterruptFunction::DATA_READY, 1]])
-        ->and($seen)->toBe(1);
+    expect($timer)->toBeInstanceOf(Timer::class)
+        ->and($timer->interval())->toBe(1_000_000)
+        ->and(firedAs343($seen))->toBe([[ADXL343InterruptFunction::DATA_READY, 1]]);
 });
 
-it('names the recurrence per chip when told, so two chips share one dock', function (): void {
-    [$chip] = interruptChip343(ADXL343InterruptFunctions::none());
-    $gpio = new FakeGPIOResource;
+it('names the timer per chip when told, so two chips share one loop', function (): void {
+    [$left] = interruptChip343(ADXL343InterruptFunctions::none());
+    [$right] = interruptChip343(ADXL343InterruptFunctions::none());
+    $loop = testLoop();
 
-    $chip->interrupts('left.adxl343')->every($gpio);
+    $left->interrupts('left.adxl343')->every($loop);
+    $right->interrupts('right.adxl343')->every($loop);
 
-    expect($gpio->recurring('left.adxl343'))->toBeInstanceOf(Recurrence::class)
-        ->and($chip->interrupts()->name)->toBe('left.adxl343');
+    expect($loop->registry->soonestDue())->not->toBeNull()
+        ->and($left->interrupts()->name)->toBe('left.adxl343');
+
+    $left->interrupts()->stop($loop);
+    $right->interrupts()->stop($loop);
+
+    expect($loop->registry->hasWork())->toBeFalse();
 });
 
-it('blocking and dock polling share one dispatcher and interleave freely', function (): void {
+it('blocking and loop polling share one dispatcher and interleave freely', function (): void {
     [$chip] = interruptChip343(new ADXL343InterruptFunctions(data_ready: true), replies: [[0x00], [0x80], [0x80], [0x80]]);
-    $gpio = new FakeGPIOResource;
+    $loop = testLoop();
     $count = 0;
-    $chip->interrupts()->on(ADXL343InterruptFunction::DATA_READY, function () use (&$count): void { $count++; });
-    $chip->interrupts()->every($gpio);
+    $chip->interrupts()->on(ADXL343InterruptFunction::DATA_READY, function () use (&$count, $loop): void {
+        if (++$count % 2 === 1) {
+            $loop->stop();
+        }
+    });
+    $chip->interrupts()->every($loop, 0.001);
 
-    $gpio->runRecurrence('adxl343.interrupts');
+    $loop->run();
     $chip->interrupts()->wait(50);
-    $gpio->runRecurrence('adxl343.interrupts');
+    $loop->run();
 
     expect($count)->toBe(3);
 });
